@@ -5,6 +5,11 @@ import connectDB from '../config/db.js'
 
 dotenv.config()
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ Refusing to run seed script in production!')
+  process.exit(1)
+}
+
 const seedUsers = [
   {
     username: 'alex',
@@ -42,13 +47,17 @@ const seed = async () => {
   try {
     await connectDB(1)
 
-    // Clear existing users
     await User.deleteMany({})
     console.log('🗑️  Cleared existing users')
 
-    // Create seed users
-    const createdUsers = await User.insertMany(seedUsers)
-    console.log(`✅ Seeded ${createdUsers.length} users:`)
+    const createdUsers = []
+    for (const userData of seedUsers) {
+      const user = new User(userData)
+      await user.save()
+      createdUsers.push(user)
+    }
+
+    console.log(`✅ Seeded ${createdUsers.length} users with bcrypt password hashing:`)
     createdUsers.forEach((user) => {
       console.log(`  👤 ${user.username} (${user.email})`)
     })
@@ -57,9 +66,14 @@ const seed = async () => {
     console.log(`  username: alex / password: password123`)
     console.log(`  username: jordan / password: password123`)
 
+    await mongoose.connection.close()
+    console.log('✅ Mongoose connection closed cleanly')
     process.exit(0)
   } catch (error) {
-    console.error('❌ Seeding error:', error)
+    console.error('❌ Seeding error:', error.message)
+    try {
+      await mongoose.connection.close()
+    } catch (e) {}
     process.exit(1)
   }
 }
