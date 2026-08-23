@@ -1,19 +1,27 @@
-export const Input = ({
+import { forwardRef } from 'react'
+
+export const Input = forwardRef(({
   label,
   error,
   helperText,
   placeholder,
   className = '',
+  id,
   ...props
-}) => {
+}, ref) => {
+  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined)
+
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-semibold text-text-primary mb-2.5">
+        <label htmlFor={inputId} className="block text-sm font-semibold text-text-primary mb-2.5">
           {label}
         </label>
       )}
       <input
+        ref={ref}
+        id={inputId}
+        aria-invalid={!!error}
         className={`w-full px-4 py-3 bg-elevated border border-border/50 rounded-lg text-text-primary placeholder-text-muted transition-all duration-300 focus:outline-none focus:border-accent-red focus:shadow-lg focus:shadow-accent-red/20 ${
           error ? 'border-accent-red focus:shadow-red-500/20' : ''
         } ${className}`}
@@ -28,4 +36,6 @@ export const Input = ({
       )}
     </div>
   )
-}
+})
+
+Input.displayName = 'Input'
