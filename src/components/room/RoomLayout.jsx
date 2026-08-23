@@ -1,12 +1,5 @@
-/* ── BACKEND INTEGRATION POINTS ──
-   - Coordinates room state management
-   - Emits: code changes, language changes, run code
-   - Listens: participant updates, code changes, output
-   - Current status: Layout structure, partial state wiring
-*/
-
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useRoomStore } from '../../store/roomStore'
 import { useRoom } from '../../hooks/useRoom'
@@ -25,48 +18,40 @@ import { CursorOverlay } from './CursorOverlay'
 
 export const RoomLayout = () => {
   const { roomCode } = useParams()
-  const navigate = useNavigate()
-
   const { code, language, output, isRunning, setOutput, setIsRunning } = useRoomStore()
-  const { handleCodeChange, handleLanguageChange } = useEditor()
+  const { handleCodeChange } = useEditor()
   const { localStream, remoteStream, toggleMic, toggleCam, isMicOn, isCamOn } = useWebRTC()
   const { connected } = useSocket()
+  
   useRoom(roomCode)
 
-  const [isConnecting, setIsConnecting] = useState(true)
-
-  useEffect(() => {
-    if (!connected && isConnecting) {
-      setTimeout(() => {
-        setIsConnecting(false)
-        toast.success('Connected to room')
-      }, 1000)
-    }
-  }, [connected, isConnecting])
-
   const handleRun = async () => {
-    if (!code.trim()) {
-      toast.error('Code is empty')
+    if (!code || !code.trim()) {
+      toast.error('Code editor is empty')
       return
     }
 
     setIsRunning(true)
     try {
       const result = await api.runCode(code, language)
-      setOutput(result.output)
-      toast.success('Code executed!')
+      setOutput(result.output || result.error || 'Execution finished with no output')
+      if (result.success) {
+        toast.success('Execution completed!')
+      } else {
+        toast.error('Execution finished with errors')
+      }
     } catch (error) {
-      setOutput('Error executing code:\n' + error.message)
-      toast.error('Failed to run code')
+      setOutput('Error executing code:\n' + (error.message || 'Server error'))
+      toast.error(error.message || 'Failed to run code')
     } finally {
       setIsRunning(false)
     }
   }
 
   return (
-    <div className="h-screen w-full bg-primary flex">
-      {/* Left Panel: Video + Participants (200px) */}
-      <div className="w-52 border-r border-border flex flex-col">
+    <div className="h-screen w-full bg-primary flex overflow-hidden">
+      {/* Left Sidebar: Video + Participants */}
+      <div className="w-52 border-r border-border flex flex-col flex-shrink-0">
         <VideoPanel
           localStream={localStream}
           remoteStream={remoteStream}
@@ -78,11 +63,11 @@ export const RoomLayout = () => {
         <ParticipantSidebar />
       </div>
 
-      {/* Center Panel: Editor (flex) */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Workspace: Header + Monaco + Output */}
+      <div className="flex-1 flex flex-col min-w-0">
         <RoomHeader />
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 relative">
+          <div className="flex-1 overflow-hidden relative">
             <CodeEditor
               value={code}
               onChange={handleCodeChange}
@@ -94,8 +79,8 @@ export const RoomLayout = () => {
         </div>
       </div>
 
-      {/* Right Panel: Chat (220px) */}
-      <div className="w-56 border-l border-border">
+      {/* Right Sidebar: Live Chat */}
+      <div className="w-56 border-l border-border flex-shrink-0">
         <ChatPanel />
       </div>
     </div>
