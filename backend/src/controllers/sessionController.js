@@ -1,5 +1,4 @@
 import Session from '../models/Session.js'
-import Room from '../models/Room.js'
 import { executeCode } from '../utils/judge0.js'
 import { JUDGE0_LANGUAGES } from '../config/constants.js'
 
@@ -11,13 +10,13 @@ export const getSessions = async (req, res, next) => {
       'users.userId': userId,
     }).populate('roomId')
 
-    const formattedSessions = sessions.map(session => ({
+    const formattedSessions = sessions.map((session) => ({
       id: session._id,
       roomCode: session.roomId?.roomCode,
       language: session.language,
       date: session.createdAt,
-      duration: '30 mins', // You can calculate this if you have end time
-      participants: session.users.map(u => u.username),
+      duration: '30 mins',
+      participants: session.users.map((u) => u.username),
     }))
 
     res.json({
@@ -36,7 +35,7 @@ export const getSession = async (req, res, next) => {
     const session = await Session.findById(sessionId).populate('roomId')
 
     if (!session) {
-      return res.status(404).json({ message: 'Session not found' })
+      return res.status(404).json({ success: false, message: 'Session not found' })
     }
 
     res.json({
@@ -53,23 +52,32 @@ export const runSessionCode = async (req, res, next) => {
     const { sessionId } = req.params
     const { code, language, stdin } = req.body
 
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Code is required' })
+    }
+
+    if (code.length > 50000) {
+      return res.status(400).json({ success: false, message: 'Code exceeds 50,000 character limit' })
+    }
+
+    if (stdin && stdin.length > 10000) {
+      return res.status(400).json({ success: false, message: 'Stdin exceeds 10,000 character limit' })
+    }
+
     const session = await Session.findById(sessionId)
 
     if (!session) {
-      return res.status(404).json({ message: 'Session not found' })
+      return res.status(404).json({ success: false, message: 'Session not found' })
     }
 
-    // Get language ID for Judge0
     const languageId = JUDGE0_LANGUAGES[language || 'javascript']
 
     if (!languageId) {
-      return res.status(400).json({ message: 'Unsupported language' })
+      return res.status(400).json({ success: false, message: 'Unsupported language' })
     }
 
-    // Execute code
     const result = await executeCode(code, languageId, stdin || '')
 
-    // Save to execution logs
     session.executionLogs.push({
       code,
       output: result.output,
@@ -88,19 +96,28 @@ export const runSessionCode = async (req, res, next) => {
   }
 }
 
-// Quick code execution endpoint (no session required)
 export const quickRunCode = async (req, res, next) => {
   try {
     const { code, language, stdin } = req.body
 
-    // Get language ID for Judge0
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Code is required' })
+    }
+
+    if (code.length > 50000) {
+      return res.status(400).json({ success: false, message: 'Code exceeds 50,000 character limit' })
+    }
+
+    if (stdin && stdin.length > 10000) {
+      return res.status(400).json({ success: false, message: 'Stdin exceeds 10,000 character limit' })
+    }
+
     const languageId = JUDGE0_LANGUAGES[language || 'javascript']
 
     if (!languageId) {
-      return res.status(400).json({ message: 'Unsupported language' })
+      return res.status(400).json({ success: false, message: 'Unsupported language' })
     }
 
-    // Execute code
     const result = await executeCode(code, languageId, stdin || '')
 
     res.json({
