@@ -8,6 +8,9 @@ export const GoogleSignInButton = ({ onSuccessRedirect = '/dashboard' }) => {
   const { login } = useAuthStore()
   const navigate = useNavigate()
 
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  const isConfigured = googleClientId && !googleClientId.includes('placeholder') && !googleClientId.includes('your_google_client_id')
+
   const handleSuccess = async (credentialResponse) => {
     try {
       const { user, token } = await api.googleLogin(credentialResponse.credential)
@@ -22,7 +25,11 @@ export const GoogleSignInButton = ({ onSuccessRedirect = '/dashboard' }) => {
   }
 
   const handleError = () => {
-    toast.error('Google Sign-In was cancelled or failed')
+    if (!isConfigured) {
+      toast.error('Please set VITE_GOOGLE_CLIENT_ID in .env file with a valid Google OAuth Client ID.')
+    } else {
+      toast.error('Google Sign-In was cancelled or failed')
+    }
   }
 
   return (
