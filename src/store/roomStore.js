@@ -11,14 +11,15 @@ export const useRoomStore = create((set) => ({
   output: '',
   isRunning: false,
 
-  setRoom: (roomCode, isHost = false, roomId = '') =>
-    set({
+  setRoom: (roomCode, isHost = false, roomId = '', initialCode = null, initialLanguage = null) =>
+    set((state) => ({
       roomCode,
       roomId,
       isHost,
-      code: DEFAULT_CODE,
-      participants: [], // Clear participants when setting a new room
-    }),
+      code: initialCode !== null && initialCode !== undefined ? initialCode : (state.roomCode === roomCode ? state.code : DEFAULT_CODE),
+      language: initialLanguage || (state.roomCode === roomCode ? state.language : 'javascript'),
+      participants: [],
+    })),
 
   setCode: (code) =>
     set({
@@ -43,19 +44,20 @@ export const useRoomStore = create((set) => ({
   addParticipant: (participant) =>
     set((state) => ({
       participants: [
-        ...state.participants.filter((p) => p.id !== participant.id),
+        ...state.participants.filter((p) => String(p.id) !== String(participant.id)),
         participant,
       ],
     })),
 
   removeParticipant: (participantId) =>
     set((state) => ({
-      participants: state.participants.filter((p) => p.id !== participantId),
+      participants: state.participants.filter((p) => String(p.id) !== String(participantId)),
     })),
 
   reset: () =>
     set({
       roomCode: '',
+      roomId: '',
       language: 'javascript',
       code: DEFAULT_CODE,
       participants: [],
