@@ -1,6 +1,11 @@
 import { customAlphabet } from 'nanoid'
 
-// Generate 6-character uppercase room codes
-const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6)
+// 6-character unambiguous alphanumeric uppercase room code generator
+const nanoid = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 6)
 
 export const generateRoomCode = () => nanoid()
+
+export const sanitizeRoomCode = (code) => {
+  if (!code || typeof code !== 'string') return ''
+  return code.trim().toUpperCase()
+}
