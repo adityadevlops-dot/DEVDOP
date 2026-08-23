@@ -1,16 +1,9 @@
-/* ── BACKEND INTEGRATION POINTS ──
-   - Emit: socket.emit('chat:message', { message })
-   - Listen: socket.on('chat:receive', (message) => { ... })
-   - Current status: UI with mock messages, no socket integration
-*/
-
 import { useEffect, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useRoomStore } from '../../store/roomStore'
 import { useSocket } from '../../hooks/useSocket'
 import { ChatMessage } from './ChatMessage'
-import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { SOCKET_EVENTS } from '../../utils/constants'
 
@@ -23,16 +16,15 @@ export const ChatPanel = () => {
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
-    if (!socket || !roomId) {
-      console.log('[CHAT] socket or roomId not ready:', { socket: !!socket, roomId, connected })
-      return
-    }
+    if (!socket || !roomId) return
 
-    console.log('[CHAT] setting up socket listener for:', SOCKET_EVENTS.RECEIVE_CHAT)
-
-    const handleReceiveMessage = (message) => {
-      console.log('[CHAT] received message:', message)
-      setMessages((prev) => [...prev, message])
+    const handleReceiveMessage = (messagePayload) => {
+      setMessages((prev) => {
+        const messageId = messagePayload.id || messagePayload.clientMsgId
+        const exists = prev.some((m) => (m.id && m.id === messageId) || (m.clientMsgId && m.clientMsgId === messagePayload.clientMsgId))
+        if (exists) return prev
+        return [...prev, messagePayload]
+      })
     }
 
     on(SOCKET_EVENTS.RECEIVE_CHAT, handleReceiveMessage)
@@ -40,7 +32,7 @@ export const ChatPanel = () => {
     return () => {
       off(SOCKET_EVENTS.RECEIVE_CHAT, handleReceiveMessage)
     }
-  }, [socket, roomId, on, off, connected])
+  }, [socket, roomId, on, off])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,40 +43,23 @@ export const ChatPanel = () => {
   }, [messages])
 
   const handleSendMessage = () => {
-    console.log('[CHAT] handleSendMessage called:', { 
-      input: input.trim(), 
-      user: !!user, 
-      roomId,
-      ready: !!(input.trim() && user && roomId)
-    })
-    
-    if (!input.trim() || !user || !roomId) {
-      console.log('[CHAT] early return - missing requirements')
-      return
-    }
+    const text = input.trim()
+    if (!text || !user || !roomId) return
 
-    const newMessage = {
-      id: Date.now().toString(),
-      userId: user._id || user.id,
-      username: user.username,
-      message: input,
-      timestamp: new Date(),
-    }
+    const clientMsgId = `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 
-    setMessages([...messages, newMessage])
+    // Do NOT optimistic append to avoid duplicates; server broadcast is source of truth
     setInput('')
 
-    // Emit socket event with roomId
-    console.log('[CHAT] emitting CHAT_MESSAGE with roomId:', roomId)
     emit(SOCKET_EVENTS.CHAT_MESSAGE, {
       roomId,
-      message: input,
+      message: text,
+      clientMsgId,
       username: user.username,
     })
-    console.log('[CHAT] message sent:', newMessage)
   }
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
@@ -99,7 +74,7 @@ export const ChatPanel = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-2 py-3">
+      <div className="flex-1 overflow-y-auto space-y-2 py-3 px-3">
         {!roomId && (
           <div className="px-4 py-2 text-xs text-text-muted bg-elevated/50 rounded">
             ⏳ Joining room...
@@ -110,13 +85,17 @@ export const ChatPanel = () => {
             No messages yet. Start chatting!
           </div>
         )}
-        {messages.map((msg) => (
-          <ChatMessage
-            key={msg.id}
-            message={msg}
-            isOwn={msg.userId === (user?._id || user?.id)}
-          />
-        ))}
+        {messages.map((msg, idx) => {
+          const key = msg.id || msg.clientMsgId || `msg_${idx}`
+          const isOwn = String(msg.userId) === String(user?._id || user?.id)
+          return (
+            <ChatMessage
+              key={key}
+              message={msg}
+              isOwn={isOwn}
+            />
+          )
+        })}
         <div ref={messagesEndRef} />
       </div>
 
@@ -127,7 +106,7 @@ export const ChatPanel = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             className="flex-1 px-3 py-2 bg-elevated border border-border rounded-button text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-blue transition-colors"
           />
