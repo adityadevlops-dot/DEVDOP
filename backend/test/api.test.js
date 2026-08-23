@@ -141,4 +141,14 @@ describe('Backend API Integration Tests', () => {
     expect(res.status).toBe(400)
     expect(res.body.success).toBe(false)
   })
+
+  it('9. Should reject Google auth request when token is missing or invalid', async () => {
+    const resMissing = await request(app).post('/api/auth/google').send({})
+    expect(resMissing.status).toBe(400)
+    expect(resMissing.body.success).toBe(false)
+
+    const resInvalid = await request(app).post('/api/auth/google').send({ credential: 'invalid_google_token' })
+    expect(resInvalid.status).toBe(401)
+    expect(resInvalid.body.success).toBe(false)
+  })
 })

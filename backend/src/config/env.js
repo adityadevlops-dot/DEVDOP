@@ -24,6 +24,7 @@ export const env = {
   JUDGE0_API_URL: process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com',
   JUDGE0_API_KEY: process.env.JUDGE0_API_KEY || '',
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5000,http://localhost:5173',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
 }
 
 export default env

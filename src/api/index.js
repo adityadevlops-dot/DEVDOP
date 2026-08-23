@@ -59,6 +59,19 @@ export const register = async (username, email, password) => {
   }
 }
 
+export const googleLogin = async (credential) => {
+  try {
+    const response = await api.post('/auth/google', { credential })
+    return response.data.data || response.data
+  } catch (error) {
+    const errorData = error.response?.data || error
+    throw {
+      message: errorData?.message || errorData?.data?.message || 'Google authentication failed',
+      data: errorData,
+    }
+  }
+}
+
 export const getMe = async () => {
   try {
     const response = await api.get('/auth/me')
