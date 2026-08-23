@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import Room from '../models/Room.js'
 import Session from '../models/Session.js'
 import User from '../models/User.js'
@@ -9,15 +10,15 @@ export const createRoom = async (req, res, next) => {
     const userId = req.user.userId
     const username = req.user.username
 
-    if (!name) {
-      return res.status(400).json({ message: 'Room name required' })
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Room name is required' })
     }
 
     const roomCode = generateRoomCode()
 
     const room = new Room({
       roomCode,
-      name,
+      name: name.trim(),
       description: description || '',
       createdBy: userId,
       participants: [{ userId, username }],
@@ -25,7 +26,6 @@ export const createRoom = async (req, res, next) => {
 
     await room.save()
 
-    // Create associated session
     const session = new Session({
       roomId: room._id,
       users: [{ userId, username }],
@@ -49,50 +49,28 @@ export const createRoom = async (req, res, next) => {
 export const getRoom = async (req, res, next) => {
   try {
     const { roomCode } = req.params
-    
-    console.log('[ROOM] getRoom request for code:', roomCode)
-
-    // Convert to uppercase for consistent lookup
     const normalizedCode = roomCode?.toUpperCase()
-    
+
     const room = await Room.findOne({ roomCode: normalizedCode }).populate('createdBy', 'username')
 
-    console.log('[ROOM] lookup result:', room ? 'found' : 'not found')
-
     if (!room) {
-      console.log('[ROOM] returning 404 - room not found')
       return res.status(404).json({ success: false, message: 'Room not found' })
     }
 
-    console.log('[ROOM] room._id:', room._id, 'roomCode:', room.roomCode)
-
-    // Populate participants with full user details (avatar, etc)
     let participantsWithDetails = []
     try {
       participantsWithDetails = await Promise.all(
         room.participants.map(async (p) => {
-          try {
-            const user = await User.findById(p.userId).select('username avatar')
-            return {
-              userId: p.userId,
-              username: user?.username || p.username,
-              avatar: user?.avatar,
-              joinedAt: p.joinedAt,
-            }
-          } catch (pError) {
-            console.error('[ROOM] Error mapping participant:', p.userId, pError)
-            return {
-              userId: p.userId,
-              username: p.username,
-              joinedAt: p.joinedAt,
-            }
+          const user = await User.findById(p.userId).select('username avatar')
+          return {
+            userId: String(p.userId),
+            username: user?.username || p.username,
+            avatar: user?.avatar,
+            joinedAt: p.joinedAt,
           }
         })
       )
-      console.log('[ROOM] populated participants:', participantsWithDetails.length)
     } catch (pError) {
-      console.error('[ROOM] Error mapping all participants:', pError)
-      // If participant mapping fails, just use basic participant data
       participantsWithDetails = room.participants
     }
 
@@ -104,14 +82,11 @@ export const getRoom = async (req, res, next) => {
       session,
     }
 
-    console.log('[ROOM] sending response with roomId:', roomData._id)
-
     res.json({
       success: true,
       data: roomData,
     })
   } catch (error) {
-    console.error('[ROOM] getRoom error:', error)
     next(error)
   }
 }
@@ -120,13 +95,24 @@ export const closeRoom = async (req, res, next) => {
   try {
     const { roomId } = req.params
 
-    const room = await Room.findByIdAndDelete(roomId)
-
-    if (!room) {
-      return res.status(404).json({ message: 'Room not found' })
+    if (!mongoose.Types.ObjectId.isValid(roomId)) {
+      return res.status(400).json({ success: false, message: 'Invalid room ID format' })
     }
 
-    // Also delete associated session
+    const room = await Room.findById(roomId)
+
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found' })
+    }
+
+    const currentUserId = String(req.user.userId || req.user._id)
+    const isOwner = room.createdBy.equals ? room.createdBy.equals(currentUserId) : String(room.createdBy) === currentUserId
+
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Only room creator can delete room' })
+    }
+
+    await Room.findByIdAndDelete(roomId)
     await Session.findOneAndDelete({ roomId })
 
     res.json({
