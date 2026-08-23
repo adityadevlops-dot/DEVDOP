@@ -72,6 +72,18 @@ Before you begin, ensure you have the following installed:
 
 ### Installation
 
+### 🐳 Docker Quickstart (Recommended)
+
+Run the full stack (MongoDB + Backend + Nginx Frontend) with a single command:
+```bash
+docker-compose up --build
+```
+- 🌐 Frontend: `http://localhost:80`
+- 🚀 Backend: `http://localhost:5000`
+- 💾 MongoDB: `localhost:27017`
+
+---
+
 **Step 1: Clone the Repository**
 ```bash
 git clone https://github.com/adityadevlops-dot/DEVDOP.git
