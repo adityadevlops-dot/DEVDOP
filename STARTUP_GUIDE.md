@@ -119,25 +119,22 @@ npm run dev
 
 ## 📋 Environment Variables
 
-### Frontend (`src/.env.local`) ✅ Already Set
+### Frontend (`.env` or `.env.local` at repository root)
 ```
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-### Backend (`backend/.env`) - Needs Your Values
+### Backend (`backend/.env`)
 ```
 NODE_ENV=development
 PORT=5000
-
-# MongoDB local or Atlas URI
 MONGODB_URI=mongodb://localhost:27017/devdop
-
-# Generate a new JWT secret (min 32 chars)
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production_12345678
-
-# Get free API key from https://rapidapi.com/judge0-official/api/judge0-ce
 JUDGE0_API_URL=https://judge0-ce.p.rapidapi.com
+JUDGE0_API_KEY=your_judge0_api_key_here
+CORS_ORIGIN=http://localhost:5000,http://localhost:5173
+```
 JUDGE0_API_KEY=your_judge0_api_key_here
 
 # Frontend URLs for CORS
