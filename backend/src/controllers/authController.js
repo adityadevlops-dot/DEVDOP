@@ -1,37 +1,58 @@
 import User from '../models/User.js'
 import { generateToken } from '../utils/generateToken.js'
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
+
 export const register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body
-
-    console.log('[AUTH] Registering user:', { username, email })
 
     if (!username || !email || !password) {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
     }
 
-    // Check if user already exists
+    const trimmedUsername = username.trim()
+    const trimmedEmail = email.trim().toLowerCase()
+
+    if (!USERNAME_REGEX.test(trimmedUsername)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username must be 3-20 characters long and contain only letters, numbers, and underscores',
+      })
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email address format',
+      })
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long and contain at least one letter and one number',
+      })
+    }
+
     const existingUser = await User.findOne({
-      $or: [{ email }, { username }],
+      $or: [{ email: trimmedEmail }, { username: trimmedUsername.toLowerCase() }],
     })
 
     if (existingUser) {
-      console.log('[AUTH] User already exists:', existingUser.email)
-      return res.status(400).json({ success: false, message: 'User already exists' })
+      return res.status(409).json({ success: false, message: 'User already exists' })
     }
 
-    // Create new user
     const user = new User({
-      username: username.toLowerCase(),
-      email: email.toLowerCase(),
+      username: trimmedUsername,
+      email: trimmedEmail,
       password,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${trimmedUsername}`,
     })
 
-    console.log('[AUTH] Saving user...')
     await user.save()
-    console.log('[AUTH] User saved successfully:', user._id)
 
     const token = generateToken(user._id, user.username)
 
@@ -43,9 +64,10 @@ export const register = async (req, res, next) => {
         token,
       },
     })
-    console.log('[AUTH] Registration successful for:', user.email)
   } catch (error) {
-    console.error('[AUTH] Registration error:', error.message)
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'User already exists' })
+    }
     next(error)
   }
 }
@@ -55,29 +77,31 @@ export const login = async (req, res, next) => {
     const { username, password } = req.body
 
     if (!username || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Username and password required' 
+        message: 'Username and password required',
       })
     }
 
+    const sanitizedIdentifier = String(username).trim().toLowerCase()
+
     const user = await User.findOne({
-      $or: [{ username: username.toLowerCase() }, { email: username.toLowerCase() }],
+      $or: [{ username: sanitizedIdentifier }, { email: sanitizedIdentifier }],
     })
 
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials',
       })
     }
 
     const isPasswordValid = await user.comparePassword(password)
 
     if (!isPasswordValid) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials',
       })
     }
 
@@ -101,7 +125,7 @@ export const getMe = async (req, res, next) => {
     const user = await User.findById(req.user.userId)
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      return res.status(404).json({ success: false, message: 'User not found' })
     }
 
     res.json({
