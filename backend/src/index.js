@@ -9,6 +9,7 @@ import connectDB from './config/db.js'
 import { setupSocketIO } from './socket/index.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { apiLimiter } from './middleware/rateLimiter.js'
+import { requestLogger } from './middleware/requestLogger.js'
 import { getCorsOrigins } from './config/cors.js'
 import env from './config/env.js'
 
@@ -33,6 +34,7 @@ app.use(
 )
 
 app.use(express.json({ limit: '1mb' }))
+app.use(requestLogger)
 app.use(mongoSanitize())
 app.use('/api', apiLimiter)
 
