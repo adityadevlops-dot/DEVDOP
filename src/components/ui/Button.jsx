@@ -5,10 +5,11 @@ export const Button = ({
   disabled = false,
   isLoading = false,
   className = '',
+  type = 'button',
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed'
+    'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent-red/50 disabled:opacity-50 disabled:cursor-not-allowed'
 
   const variants = {
     primary: 'bg-accent-red hover:bg-accent-red/90 text-white shadow-lg hover:shadow-red-500/30 hover:shadow-xl',
@@ -26,14 +27,16 @@ export const Button = ({
 
   return (
     <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      type={type}
+      className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${className}`}
       disabled={disabled || isLoading}
+      aria-busy={isLoading}
       {...props}
     >
       {isLoading ? (
         <>
           <span className="inline-block w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Loading...
+          <span>Loading...</span>
         </>
       ) : (
         children
