@@ -1,0 +1,103 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DevDop API Documentation",
+    "description": "Production-ready Real-time Pair Programming Platform API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Development Server"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "User already exists" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Authentication successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/rooms": {
+      "post": {
+        "summary": "Create collaborative room",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": { "description": "Room created" }
+        }
+      }
+    },
+    "/rooms/{roomCode}": {
+      "get": {
+        "summary": "Get room state",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Room details" },
+          "404": { "description": "Room not found" }
+        }
+      }
+    },
+    "/sessions/run": {
+      "post": {
+        "summary": "Execute code via Judge0 API",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Execution result" },
+          "400": { "description": "Code payload oversized (>50k chars)" },
+          "429": { "description": "Rate limit exceeded (max 10 runs/min)" }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Server and DB health check",
+        "responses": {
+          "200": { "description": "DB Connected" },
+          "503": { "description": "DB Disconnected" }
+        }
+      }
+    }
+  }
+}
