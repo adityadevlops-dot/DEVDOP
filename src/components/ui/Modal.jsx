@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './Button'
 
@@ -9,6 +10,24 @@ export const Modal = ({
   actions,
   size = 'md',
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose?.()
+      }
+    }
+
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      window.addEventListener('keydown', handleKeyDown)
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const sizes = {
@@ -19,14 +38,19 @@ export const Modal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
       <div
-        className={`bg-elevated border border-border/50 rounded-2xl p-8 shadow-2xl ${sizes[size]}`}
+        className={`w-full bg-elevated border border-border/50 rounded-2xl p-8 shadow-2xl ${sizes[size] || sizes.md}`}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
           {title && <h2 className="text-2xl font-bold text-text-primary">{title}</h2>}
           <button
             onClick={onClose}
+            aria-label="Close modal"
             className="text-text-muted hover:text-accent-red transition-colors duration-300 p-2"
           >
             <X size={22} />
