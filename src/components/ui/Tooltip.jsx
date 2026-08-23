@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export const Tooltip = ({
   content,
@@ -7,16 +7,17 @@ export const Tooltip = ({
   delay = 200,
 }) => {
   const [isVisible, setIsVisible] = useState(false)
-  let timeoutId
+  const timerRef = useRef(null)
 
   const handleMouseEnter = () => {
-    timeoutId = setTimeout(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
       setIsVisible(true)
     }, delay)
   }
 
   const handleMouseLeave = () => {
-    clearTimeout(timeoutId)
+    if (timerRef.current) clearTimeout(timerRef.current)
     setIsVisible(false)
   }
 
@@ -30,9 +31,9 @@ export const Tooltip = ({
   return (
     <div className="relative inline-block" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       {children}
-      {isVisible && (
+      {isVisible && content && (
         <div
-          className={`absolute z-50 px-3 py-2 text-xs font-medium text-white bg-accent-red border border-accent-red rounded-button whitespace-nowrap pointer-events-none ${positions[side]}`}
+          className={`absolute z-50 px-2.5 py-1 text-xs font-medium text-white bg-elevated border border-border shadow-lg rounded-md whitespace-nowrap pointer-events-none ${positions[side] || positions.top}`}
         >
           {content}
         </div>
