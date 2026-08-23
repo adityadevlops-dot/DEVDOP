@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "seed": "node src/scripts/seed.js"
+    "seed": "node src/scripts/seed.js",
+    "test": "vitest run"
   },
   "keywords": [
     "devdop",
@@ -35,6 +36,9 @@
     "socket.io": "^4.6.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "mongodb-memory-server": "^11.2.0",
+    "nodemon": "^2.0.22",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.11"
   }
 }
