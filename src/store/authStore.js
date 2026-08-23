@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { destroySocket } from '../socket/socket'
 
 export const useAuthStore = create(
   persist(
@@ -8,19 +9,26 @@ export const useAuthStore = create(
       token: null,
       isLoggedIn: false,
 
-      login: (user, token) =>
+      login: (user, token) => {
+        if (token) {
+          localStorage.setItem('token', token)
+        }
         set({
           user,
           token,
           isLoggedIn: true,
-        }),
+        })
+      },
 
-      logout: () =>
+      logout: () => {
+        localStorage.removeItem('token')
+        destroySocket()
         set({
           user: null,
           token: null,
           isLoggedIn: false,
-        }),
+        })
+      },
 
       setUser: (user) =>
         set({
