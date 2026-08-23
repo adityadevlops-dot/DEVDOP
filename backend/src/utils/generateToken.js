@@ -1,14 +1,13 @@
 import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key'
+import { env } from '../config/env.js'
 
 export const generateToken = (userId, username) => {
-  return jwt.sign({ userId, username }, JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign({ userId, username }, env.JWT_SECRET, { expiresIn: '7d' })
 }
 
 export const verifyToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET)
+    return jwt.verify(token, env.JWT_SECRET)
   } catch (error) {
     throw new Error('Invalid token')
   }
