@@ -51,13 +51,11 @@ const roomSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // Auto-delete rooms after 24 hours
-    expires: 86400,
   }
 )
 
-// Index for fast room code lookup
 roomSchema.index({ roomCode: 1 })
 roomSchema.index({ createdBy: 1 })
+roomSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 })
 
 export default mongoose.model('Room', roomSchema)

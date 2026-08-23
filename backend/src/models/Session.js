@@ -33,6 +33,9 @@ const sessionSchema = new mongoose.Schema(
     ],
     messages: [
       {
+        id: String,
+        clientMsgId: String,
+        userId: String,
         username: String,
         message: String,
         timestamp: { type: Date, default: Date.now },
@@ -41,13 +44,11 @@ const sessionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // Auto-delete sessions after 30 days
-    expires: 2592000,
   }
 )
 
-// Index for fast session lookups
 sessionSchema.index({ roomId: 1 })
 sessionSchema.index({ 'users.userId': 1 })
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 })
 
 export default mongoose.model('Session', sessionSchema)
