@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { getInitials } from '../../utils/helpers'
 
 export const Avatar = ({
@@ -8,6 +9,8 @@ export const Avatar = ({
   className = '',
   backgroundColor,
 }) => {
+  const [imageError, setImageError] = useState(false)
+
   const sizes = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
@@ -15,11 +18,12 @@ export const Avatar = ({
   }
 
   const getDisplay = () => {
-    if (src) {
+    if (src && !imageError) {
       return (
         <img
           src={src}
           alt={alt || 'avatar'}
+          onError={() => setImageError(true)}
           className="w-full h-full rounded-full object-cover"
         />
       )
@@ -29,7 +33,7 @@ export const Avatar = ({
 
     return (
       <div
-        className="w-full h-full rounded-full flex items-center justify-center font-mono font-semibold text-white"
+        className="w-full h-full rounded-full flex items-center justify-center font-mono font-semibold text-white select-none"
         style={{
           backgroundColor: backgroundColor || '#ff2c2c',
         }}
@@ -40,7 +44,7 @@ export const Avatar = ({
   }
 
   return (
-    <div className={`${sizes[size]} inline-flex items-center justify-center flex-shrink-0 ${className}`}>
+    <div className={`${sizes[size] || sizes.md} inline-flex items-center justify-center flex-shrink-0 ${className}`}>
       {getDisplay()}
     </div>
   )
