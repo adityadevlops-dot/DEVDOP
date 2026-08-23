@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Terminal, Play, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/Button'
 
 export const OutputPanel = ({ output, isLoading, onRun }) => {
   const [isExpanded, setIsExpanded] = useState(!!output || isLoading)
 
-  // Auto-expand when output or loading starts
-  if ((output || isLoading) && !isExpanded) {
-    setIsExpanded(true)
-  }
+  useEffect(() => {
+    if (output || isLoading) {
+      setIsExpanded(true)
+    }
+  }, [output, isLoading])
 
   return (
     <div className={`bg-primary border-t border-border flex flex-col transition-all ${isExpanded ? 'h-40' : 'h-12'}`}>

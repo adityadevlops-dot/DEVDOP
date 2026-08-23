@@ -35,12 +35,32 @@ export const getColorForUser = (username, index = 0) => {
     '#00d9ff', // accent-teal
     '#00d652', // accent-green
   ]
-  const hash = username.charCodeAt(0) + (index % 5)
+  const hash = (username || '').charCodeAt(0) + (index % 5)
   return colors[hash % colors.length]
 }
 
-export const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text)
+export const copyToClipboard = async (text) => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      const successful = document.execCommand('copy')
+      textArea.remove()
+      return successful
+    }
+  } catch (err) {
+    console.error('Copy to clipboard failed:', err)
+    return false
+  }
 }
 
 export const validateEmail = (email) => {
@@ -49,5 +69,5 @@ export const validateEmail = (email) => {
 }
 
 export const validatePassword = (password) => {
-  return password.length >= 6
+  return password.length >= 8
 }

@@ -3,36 +3,24 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 export const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, logout } = useAuthStore()
+  const { isLoggedIn } = useAuthStore()
   const location = useLocation()
-  const [isValidating, setIsValidating] = useState(true)
-  const [isValid, setIsValid] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    // Check if token exists and is valid
-    const token = localStorage.getItem('token')
-    
-    if (!token || !isLoggedIn) {
-      setIsValid(false)
-    } else {
-      setIsValid(true)
-    }
-    
-    setIsValidating(false)
+    setCheckingAuth(false)
   }, [isLoggedIn])
 
-  if (isValidating) {
-    return <div className="min-h-screen bg-primary flex items-center justify-center">
-      <p className="text-text-muted">Loading...</p>
-    </div>
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <p className="text-text-muted text-sm">Validating session...</p>
+      </div>
+    )
   }
 
-  if (!isValid) {
-    // Clear auth state if token is invalid
-    if (isLoggedIn) {
-      logout()
-      localStorage.removeItem('token')
-    }
+  const token = localStorage.getItem('token')
+  if (!token || !isLoggedIn) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
