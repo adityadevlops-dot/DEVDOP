@@ -1,15 +1,11 @@
 import mongoose from 'mongoose'
-import dotenv from 'dotenv'
-
-dotenv.config()
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/devdop'
-
-console.log('🔗 Connecting to MongoDB:', MONGODB_URI)
+import { env } from './env.js'
 
 const connectDB = async (retries = 3) => {
   try {
-    await mongoose.connect(MONGODB_URI, {
+    const hostName = env.MONGODB_URI.split('@')[1] ? env.MONGODB_URI.split('@')[1].split('/')[0] : 'localhost'
+    console.log(`🔗 Connecting to MongoDB host: ${hostName}`)
+    await mongoose.connect(env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })
