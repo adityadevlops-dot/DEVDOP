@@ -1,11 +1,4 @@
-/* ── BACKEND INTEGRATION POINTS ──
-   - Emit code changes: socket.emit('code-change', { code, language })
-   - Listen for remote changes: socket.on('code-change')
-   - Handle remote cursor decorations
-   - Current status: Editor UI with sync integration
-*/
-
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Editor } from '@monaco-editor/react'
 import { useSocket } from '../../hooks/useSocket'
 import { useRoomStore } from '../../store/roomStore'
@@ -20,12 +13,19 @@ export const CodeEditor = ({
 }) => {
   const { socket, on, off, emit } = useSocket()
   const { roomId } = useRoomStore()
+  const emitTimerRef = useRef(null)
 
   useEffect(() => {
     if (!socket || !roomId) return
 
     const handleCodeChange = (data) => {
-      onChange(data.code)
+      // False suppression check
+      if (data.senderId && data.senderId === socket.id) {
+        return
+      }
+      if (data.code !== undefined && data.code !== value) {
+        onChange(data.code)
+      }
     }
 
     on(SOCKET_EVENTS.CODE_CHANGE, handleCodeChange)
@@ -33,20 +33,27 @@ export const CodeEditor = ({
     return () => {
       off(SOCKET_EVENTS.CODE_CHANGE, handleCodeChange)
     }
-  }, [socket, roomId, on, off, onChange])
+  }, [socket, roomId, on, off, onChange, value])
 
   const handleChange = (val) => {
     const newValue = val || ''
     onChange(newValue)
-    // Emit code change to other users with roomId
+
     if (roomId) {
-      emit(SOCKET_EVENTS.CODE_CHANGE, { 
-        roomId,
-        code: newValue, 
-        language 
-      })
+      if (emitTimerRef.current) {
+        clearTimeout(emitTimerRef.current)
+      }
+
+      emitTimerRef.current = setTimeout(() => {
+        emit(SOCKET_EVENTS.CODE_CHANGE, {
+          roomId,
+          code: newValue,
+          language,
+        })
+      }, 150)
     }
   }
+
   return (
     <div className="w-full h-full border-t border-b border-border">
       <Editor
@@ -71,15 +78,14 @@ export const CodeEditor = ({
           formatOnType: true,
         }}
         beforeMount={(monaco) => {
-          // VS Dark theme customization
           monaco.editor.defineTheme('vs-dark', {
             base: 'vs-dark',
             inherit: true,
             rules: [
-              { token: 'keyword', foreground: 'ff2c2c' }, // accent-red
-              { token: 'string', foreground: 'ffd700' }, // accent-gold
-              { token: 'number', foreground: 'ffd700' }, // accent-gold
-              { token: 'entity.name.function', foreground: 'ff8c00' }, // accent-orange
+              { token: 'keyword', foreground: 'ff2c2c' },
+              { token: 'string', foreground: 'ffd700' },
+              { token: 'number', foreground: 'ffd700' },
+              { token: 'entity.name.function', foreground: 'ff8c00' },
             ],
             colors: {
               'editor.background': '#0a0a0a',

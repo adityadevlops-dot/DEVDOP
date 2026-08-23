@@ -1,58 +1,90 @@
 import { SOCKET_EVENTS } from '../config/constants.js'
 import Session from '../models/Session.js'
 
-let codeChangeDebounce = {}
+const codeDebounceMap = new Map()
+
+export const flushPendingSave = async (roomId) => {
+  const pending = codeDebounceMap.get(roomId)
+  if (pending) {
+    clearTimeout(pending.timer)
+    codeDebounceMap.delete(roomId)
+    try {
+      await Session.findOneAndUpdate(
+        { roomId },
+        { $set: { code: pending.code, language: pending.language } }
+      )
+      console.log(`💾 Immediate flush of code saved for room ${roomId}`)
+    } catch (error) {
+      console.error('[CODE] Error flushing code:', error.message)
+    }
+  }
+}
 
 export const handleCodeChange = (io, socket) => {
   socket.on(SOCKET_EVENTS.CODE_CHANGE, async (data) => {
     const { roomId, code, language } = data
 
-    // Debounce code saves (500ms)
-    if (codeChangeDebounce[roomId]) {
-      clearTimeout(codeChangeDebounce[roomId])
+    if (!roomId) return
+
+    // Debounce code saves per roomId
+    if (codeDebounceMap.has(roomId)) {
+      clearTimeout(codeDebounceMap.get(roomId).timer)
     }
 
-    codeChangeDebounce[roomId] = setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      codeDebounceMap.delete(roomId)
       try {
-        // Save code to session
-        const session = await Session.findOne({ roomId })
-        if (session) {
-          session.code = code
-          session.language = language || session.language
-          await session.save()
-          console.log(`💾 Code saved for room ${roomId}`)
-        }
+        await Session.findOneAndUpdate(
+          { roomId },
+          { $set: { code, language } }
+        )
+        console.log(`💾 Code saved for room ${roomId}`)
       } catch (error) {
-        console.error('[CODE] Error saving code:', error)
+        console.error('[CODE] Error saving code:', error.message)
       }
     }, 500)
 
-    // Broadcast to other users in room
-    socket.to(roomId).emit(SOCKET_EVENTS.CODE_CHANGE, { code, language })
-    console.log(`📝 Code changed in room ${roomId}`)
+    codeDebounceMap.set(roomId, { timer, code, language })
+
+    // Broadcast code change to other sockets in room with senderId
+    socket.to(roomId).emit(SOCKET_EVENTS.CODE_CHANGE, {
+      code,
+      language,
+      senderId: socket.id,
+    })
   })
 }
 
 export const handleCursorMove = (io, socket) => {
   socket.on(SOCKET_EVENTS.CURSOR_MOVE, (data) => {
     const { roomId, line, column, username } = data
+    if (!roomId) return
 
-    // Broadcast cursor position to other users
     socket.to(roomId).emit(SOCKET_EVENTS.CURSOR_MOVE, {
       line,
       column,
       username,
+      senderId: socket.id,
     })
   })
 }
 
 export const handleLanguageChange = (io, socket) => {
-  socket.on(SOCKET_EVENTS.LANGUAGE_CHANGE, (data) => {
+  socket.on(SOCKET_EVENTS.LANGUAGE_CHANGE, async (data) => {
     const { roomId, language } = data
+    if (!roomId || !language) return
 
-    // Broadcast language change to ALL users in room (including sender)
-    io.to(roomId).emit(SOCKET_EVENTS.LANGUAGE_CHANGE, { language })
+    io.to(roomId).emit(SOCKET_EVENTS.LANGUAGE_CHANGE, {
+      roomId,
+      language,
+      senderId: socket.id,
+    })
 
-    console.log(`🔄 Language changed to ${language} in room ${roomId}`)
+    try {
+      await Session.findOneAndUpdate({ roomId }, { $set: { language } })
+      console.log(`🔄 Language changed to ${language} in room ${roomId}`)
+    } catch (err) {
+      console.error('[LANGUAGE CHANGE ERROR]:', err.message)
+    }
   })
 }

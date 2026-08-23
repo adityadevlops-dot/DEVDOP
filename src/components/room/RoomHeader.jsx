@@ -1,22 +1,24 @@
 import { Copy, LogOut } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react'
 import { useRoomStore } from '../../store/roomStore'
+import { useSocket } from '../../hooks/useSocket'
+import { useWebRTC } from '../../hooks/useWebRTC'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { Tooltip } from '../ui/Tooltip'
 import { LanguageSelect } from '../editor/LanguageSelect'
 import { copyToClipboard } from '../../utils/helpers'
+import { SOCKET_EVENTS } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
 export const RoomHeader = () => {
   const navigate = useNavigate()
   const { roomCode: urlRoomCode } = useParams()
-  const { roomCode: storeRoomCode, language, setLanguage, isHost } = useRoomStore()
+  const { roomCode: storeRoomCode, roomId, language, setLanguage, isHost, reset } = useRoomStore()
+  const { emit } = useSocket()
+  const { stopMedia } = useWebRTC()
 
-  // Use store roomCode, fallback to URL roomCode
   const roomCode = storeRoomCode || urlRoomCode
-
-  console.log('[HEADER] roomCode:', roomCode, 'storeRoomCode:', storeRoomCode, 'urlRoomCode:', urlRoomCode, 'isHost:', isHost)
 
   const handleCopyCode = () => {
     if (!roomCode) {
@@ -27,8 +29,23 @@ export const RoomHeader = () => {
     toast.success('Room code copied!')
   }
 
+  const handleLanguageChange = (newLanguage) => {
+    setLanguage(newLanguage)
+    if (roomId) {
+      emit(SOCKET_EVENTS.LANGUAGE_CHANGE, {
+        roomId,
+        language: newLanguage,
+      })
+    }
+  }
+
   const handleLeaveRoom = () => {
     if (window.confirm('Leave the room?')) {
+      if (roomId) {
+        emit(SOCKET_EVENTS.LEAVE_ROOM, { roomId })
+      }
+      stopMedia()
+      reset()
       navigate('/')
       toast.success('Left the room')
     }
@@ -65,7 +82,7 @@ export const RoomHeader = () => {
       {/* Center: Language Select */}
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-text-muted">Language:</label>
-        <LanguageSelect value={language} onChange={setLanguage} />
+        <LanguageSelect value={language} onChange={handleLanguageChange} />
       </div>
 
       {/* Right: Leave Button */}

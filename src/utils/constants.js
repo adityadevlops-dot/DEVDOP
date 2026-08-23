@@ -7,7 +7,6 @@ export const LANGUAGES = [
   { id: 'python', label: 'Python', ext: '.py' },
   { id: 'java', label: 'Java', ext: '.java' },
   { id: 'cpp', label: 'C++', ext: '.cpp' },
-  { id: 'csharp', label: 'C#', ext: '.cs' },
   { id: 'go', label: 'Go', ext: '.go' },
   { id: 'rust', label: 'Rust', ext: '.rs' },
 ]
