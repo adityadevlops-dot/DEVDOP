@@ -29,6 +29,7 @@ const sessionSchema = new mongoose.Schema(
         output: String,
         status: String,
         executedBy: String,
+        durationMs: { type: Number, default: 0 },
       },
     ],
     messages: [
